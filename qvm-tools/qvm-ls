@@ -97,6 +97,10 @@ def main():
     parser.add_argument ("VMs", action="store", nargs="*",
                         help="Specify VMs to be queried")
 
+    parser.add_argument ("-r", "--running", dest="running",
+                       action="store_true", default=False,
+                       help="Only show running VMs")
+
     parser.add_argument ("-n", "--network", dest="network",
                        action="store_true", default=False,
                        help="Show network addresses assigned to VMs")
@@ -193,29 +197,29 @@ def main():
         vms_to_display = [vm for vm in vms_list if vm.name in arguments.VMs]
     #otherwise, format them accordingly:
     else:
-        no_vms = len (vms_list)
         vms_to_display = []
         # Frist, the NetVMs...
         for netvm in vms_list:
-            if netvm.is_netvm():
+            if netvm.is_netvm() and ((not arguments.running) or netvm.is_running()):
                 vms_to_display.append (netvm)
 
         # Now, the AppVMs without template (or with template not included in the list)...
         for appvm in vms_list:
             if appvm.is_appvm() and not appvm.is_template() and \
-                (appvm.template is None or appvm.template not in vms_list):
+                (appvm.template is None or appvm.template not in vms_list) and \
+                ((not arguments.running) or appvm.is_running()):
                 vms_to_display.append (appvm)
 
         # Now, the template, and all its AppVMs...
         for tvm in vms_list:
             if tvm.is_template():
-                vms_to_display.append (tvm)
+                if (not arguments.running) or tvm.is_running():
+                     vms_to_display.append (tvm)
                 for vm in vms_list:
                     if (vm.is_appvm() or vm.is_disposablevm()) and \
-                vm.template and vm.template.qid == tvm.qid:
+                      vm.template and vm.template.qid == tvm.qid and \
+                      ((not arguments.running) or vm.is_running()):
                         vms_to_display.append(vm)
-
-        assert len(vms_to_display) == no_vms
 
     #We DON'T NEED a max_width if we devide output by pipes!
 
